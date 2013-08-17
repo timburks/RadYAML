@@ -22,14 +22,9 @@ static int YAMLSerializationDataHandler(void *string, unsigned char *buffer, siz
     return YES;
 }
 
-static int YAMLSerializationWriteHandler(void *data, unsigned char *buffer, size_t size)
-{
-    return ([(__bridge NSOutputStream *)data write:buffer maxLength:size] <= 0) ? NO : YES;
-}
-
 static int YAMLSerializationProcessValue(yaml_document_t *document, id value)
 {
-    NSInteger nodeId = 0;
+    int nodeId = 0;
     if ([value isKindOfClass:[NSDictionary class]]) {
         nodeId = yaml_document_add_mapping(document, NULL, YAML_BLOCK_MAPPING_STYLE);
         NSArray *keys = [[value allKeys] sortedArrayUsingSelector:@selector(compare:)];
@@ -56,14 +51,14 @@ static int YAMLSerializationProcessValue(yaml_document_t *document, id value)
             [dateFormatter setDateFormat:DATEFORMAT];
         }
         NSString *printValue = [dateFormatter stringFromDate:value];
-        nodeId = yaml_document_add_scalar(document, NULL, (yaml_char_t*)[printValue UTF8String], [printValue length], YAML_PLAIN_SCALAR_STYLE);
+        nodeId = yaml_document_add_scalar(document, NULL, (yaml_char_t*)[printValue UTF8String], (int) [printValue length], YAML_PLAIN_SCALAR_STYLE);
     }
     else {
         if (![value isKindOfClass:[NSString class]] ) {
             value = [value stringValue];
         }
         yaml_char_t *utf8String = (yaml_char_t *) [value UTF8String];
-        int length = strlen((const char *) utf8String);
+        int length = (int) strlen((const char *) utf8String);
         nodeId = yaml_document_add_scalar(document, NULL, utf8String, length, YAML_ANY_SCALAR_STYLE);
     }
     return nodeId;
@@ -111,11 +106,13 @@ static yaml_document_t* YAMLSerializationToDocument(id yaml)
 
 static int YAMLSerializationReadHandler(void *data, unsigned char *buffer, size_t size, size_t *size_read)
 {
-    *size_read = [(__bridge NSInputStream *)data read:(uint8_t *)buffer maxLength:size];
-    if (*size_read < 0) {
-        *size_read = 0;
+    NSInteger result = [(__bridge NSInputStream *)data read:(uint8_t *)buffer maxLength:size];
+    if (result < 0) {
+        result = 0;
+        *size_read = (size_t) result;
         return NO;
     }
+    *size_read = (size_t) result;
     return YES;
 }
 
@@ -186,6 +183,8 @@ static id YAMLSerializationWithDocument(yaml_document_t *document)
                 if (!root) root = item;
                 break;
             }
+            default:
+                break;
         }
     }
     
@@ -207,16 +206,6 @@ static id YAMLSerializationWithDocument(yaml_document_t *document)
                 break;
         }
     }
- 
-    /*
-    // Retain the root object
-    if (root)
-        [root retain];
-    
-    // Release all objects. The root object and all objects in containers will have retain count > 0
-    for (node = document->nodes.start, i = 0; node < document->nodes.top; node++, i++)
-        [objects[i] release];
-     */
     
     return root;
 }
@@ -279,7 +268,6 @@ static id YAMLSerializationWithDocument(yaml_document_t *document)
     }
     yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
     yaml_emitter_set_output(&emitter, YAMLSerializationDataHandler, (__bridge void *)string);
-    NSError *error = nil;
     yaml_document_t *document = YAMLSerializationToDocument(self);
     if (!document) {
         yaml_emitter_delete(&emitter);

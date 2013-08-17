@@ -22,7 +22,7 @@
 
 (case SYSTEM
       ("Darwin"
-               (set @arch (list "x86_64" "i386"))
+               (set @arch (list "x86_64"))
                (set @cflags "-g -std=gnu99")
                (set @mflags "-fobjc-arc ")
                (set @ldflags "-framework Foundation"))
