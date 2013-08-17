@@ -27,11 +27,11 @@
                (set @mflags "-fobjc-arc ")
                (set @ldflags "-framework Foundation"))
       ("Linux"
-              (set @arch (list "i386"))
+              (set @arch (list "x86_64"))
               (set gnustep_flags ((NSString stringWithShellCommand:"gnustep-config --objc-flags") chomp))
               (set gnustep_libs ((NSString stringWithShellCommand:"gnustep-config --base-libs") chomp))
-              (set @cflags "-g -std=gnu99 -DLINUX -I/usr/local/include #{gnustep_flags}")
-              (set @ldflags "#{gnustep_libs}"))
+              (set @cflags "-g -DLINUX -I/usr/local/include #{gnustep_flags} -fconstant-string-class=NSConstantString -fobjc-nonfragile-abi -fobjc-arc -fblocks")
+              (set @ldflags "#{gnustep_libs} -ldispatch -levent"))
       (else nil))
 
 
